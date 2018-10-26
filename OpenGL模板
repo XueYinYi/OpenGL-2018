@@ -1,0 +1,1172 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <ctype.h>
+
+#define _USE_MATH_DEFINES
+#include <math.h>
+
+#ifdef WIN32
+#include <windows.h>
+#pragma warning（禁用：4996）
+#include“glew.h”
+＃万一
+
+#include <OpenGL / gl.h>
+#include <OpenGL / glu.h>
+#include <GLUT / glut.h>
+
+
+//这是一个示例OpenGL / GLUT程序
+//
+//目标是绘制一个3d对象并更改轴的颜色
+//有过多的菜单
+//
+//鼠标左键旋转
+//鼠标中键可以缩放
+//用户界面允许：
+// 1.要打开和关闭的轴
+// 2.要更改的轴的颜色
+// 3.调试打开和关闭
+// 4.深度提示打开和关闭
+// 5.要改变的投影
+// 6.要重置的转换
+// 7.退出计划
+//
+//作者：Joe Graphics
+
+//注意：使用const变量有很多很好的理由
+//＃define‘s。但是，Visual C ++不允许使用const变量
+//用作数组大小或switch（）语句中的大小写。所以
+//以下，所有常量都是const变量，除了那些需要的变量
+//是switch（）语句中的数组大小或大小写。那些是#defines。
+
+
+//这些窗口的标题：
+
+const char * WINDOWTITLE = {“OpenGL / GLUT Sample - Joe Graphics”};
+const char * GLUITITLE = {“用户界面窗口”};
+
+
+// glui包定义为true和false：
+
+const int GLUITRUE = {true};
+const int GLUIFALSE = {false};
+
+
+//转义键：
+
+#define ESCAPE 0x1b
+
+
+//初始窗口大小：
+
+const int INIT_WINDOW_SIZE = {600};
+
+
+//盒子的大小：
+
+const float BOXSIZE = {2.f};
+
+
+
+//输入交互的乘法因子：
+//（这些是从以前的经验中知道的）
+
+const float ANGFACT = {1.};
+const float SCLFACT = {0.005f};
+
+
+//最小允许比例因子：
+
+const float MINSCALE = {0.05f};
+
+
+//活动鼠标按钮（或它们在一起）：
+
+const int LEFT = {4};
+const int MIDDLE = {2};
+const int RIGHT = {1};
+
+
+//哪个投影：
+
+enum Projections
+{
+    ORTHO,
+    PERSP
+};
+
+
+//哪个按钮：
+
+enum ButtonVals
+{
+    RESET,
+    QUIT
+};
+
+
+//窗口背景颜色（rgba）：
+
+const GLfloat BACKCOLOR [] = {0.，0.，0.，1。};
+
+
+//轴的线宽：
+
+const GLfloat AXES_WIDTH = {3.};
+
+
+//颜色编号：
+//此订单必须与单选按钮顺序匹配
+
+enum Colors
+{
+    红，
+    黄色，
+    绿色，
+    青色，
+    蓝色，
+    品红，
+    白色，
+    黑色
+};
+
+char * ColorNames [] =
+{
+    “红”，
+    “黄色”，
+    “绿色”，
+    “青色”，
+    “蓝色”，
+    “品红”，
+    “白色”，
+    “黑色”
+};
+
+
+//颜色定义：
+//此订单必须与菜单顺序相匹配
+
+const GLfloat Colors [] [3] =
+{
+    {1.，0.，0。}，//红色
+    {1.，1.，0.}，//黄色
+    {0.，1.，0。}，//绿色
+    {0.，1.，1。}，//青色
+    {0.，0.，1。}，//蓝色
+    {1.，0.，1。}，//洋红色
+    {1.，1.，1。}，//白色
+    {0.，0.，0。}，//黑色
+};
+
+
+//雾参数：
+
+const GLfloat FOGCOLOR [4] = {。0，.0，.0,1。};
+const GLenum FOGMODE = {GL_LINEAR};
+const GLfloat FOGDENSITY = {0.30f};
+const GLfloat FOGSTART = {1.5};
+const GLfloat FOGEND = {4.};
+
+
+//非常量全局变量：
+
+int ActiveButton; //当前按钮已关闭
+GLuint AxesList; //列出来保持轴
+int AxesOn; //！= 0表示绘制轴
+int DebugOn; //！= 0表示打印调试信息
+int DepthCueOn; //！= 0表示使用强度深度提示
+GLuint BoxList; //对象显示列表
+int MainWindow; //主图形窗口的窗口ID
+浮标; //比例因子
+int WhichColor; //索引到Colors []
+int WhichProjection; // ORTHO或PERSP
+int Xmouse，Ymouse; //鼠标值
+漂浮的Xrot，Yrot; //以度为单位的旋转角度
+
+
+//函数原型：
+
+void Animate（）;
+void Display（）;
+void DoAxesMenu（int）;
+void DoColorMenu（int）;
+void DoDepthMenu（int）;
+void DoDebugMenu（int）;
+void DoMainMenu（int）;
+void DoProjectMenu（int）;
+void DoRasterString（float，float，float，char *）;
+void DoStrokeString（float，float，float，float，char *）;
+float ElapsedSeconds（）;
+void InitGraphics（）;
+void InitLists（）;
+void InitMenus（）;
+void Keyboard（unsigned char，int，int）;
+void MouseButton（int，int，int，int）;
+void MouseMotion（int，int）;
+void Reset（）;
+void Resize（int，int）;
+void Visibility（int）;
+
+void Axes（float）;
+void HsvRgb（float [3]，float [3]）;
+
+//主程序：
+
+INT
+main（int argc，char * argv []）
+{
+    //打开过剩包装：
+    //（在检查argc和argv之前执行此操作，因为它可能
+    //拉出一些命令行参数
+    
+    glutInit（＆argc，argv）;
+    
+    
+    //设置所有图形内容：
+    
+    InitGraphics（）;
+    
+    
+    //创建不会改变的显示结构：
+    
+    InitLists（）;
+    
+    
+    //初始化Display（）使用的所有全局变量：
+    //这也会发布重新显示
+    
+    重启（ ）;
+    
+    
+    //设置所有用户界面的东西：
+    
+    InitMenus（）;
+    
+    
+    //绘制一次场景并等待一些互动：
+    //（这永远不会回来）
+    
+    glutSetWindow（MainWindow）;    多个windows时使用
+    glutMainLoop（）;
+    
+    
+    //这是为了让编译器满意：
+    
+    返回0;
+}
+
+
+//这是人们放置要调用的代码的地方
+//每次glut主循环无关
+//
+//这通常是设置动画参数的地方
+//
+//不要从这里调用Display（） - 让glutMainLoop（）来做
+
+void
+Animate（）
+{
+    //将动画内容放在这里 - 更改一些全局变量
+    //对于Display（）来查找：
+    
+    //下次方便时强制调用Display（）：
+    
+    glutSetWindow（MainWindow）;
+    glutPostRedisplay（）;
+}
+
+
+//绘制完整的场景：
+
+void
+dissplay（）  你想在界面上看到啥
+{
+    if（DebugOn！= 0）
+    {
+        fprintf（stderr，“Display \ n”）;
+    }
+    
+    
+    //设置我们要将图形放入哪个窗口：
+    
+    glutSetWindow（MainWindow）;
+    
+    
+    //擦除背景：
+    
+    glDrawBuffer（GL_BACK）;
+    glClear（GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT）;
+    glEnable（GL_DEPTH_TEST）;
+    
+    
+    //指定着色为平面：
+    
+    glShadeModel（GL_FLAT）;
+
+//将视口设置为窗口中心的正方形：
+    
+    GLsizei vx = glutGet（GLUT_WINDOW_WIDTH）;
+    GLsizei vy = glutGet（GLUT_WINDOW_HEIGHT）;
+    GLsizei v = vx <vy？ vx：vy; //最小尺寸
+    GLint xl =（vx - v）/ 2;
+    GLint yb =（vy - v）/ 2;
+    glViewport（xl，yb，v，v）;
+    
+    
+    //设置查看量：
+    //记住Z裁剪值实际上是
+    //作为眼前的距离给出
+    //使用gluOrtho2D（）如果您正在进行2D！
+    
+    glMatrixMode（GL_PROJECTION）;
+    glLoadIdentity（）;
+    if（WhichProjection == ORTHO）
+        glOrtho（-3。，3.，-3。，3.，0.1,1000。）;
+    其他
+        gluPerspective（90。，1.，0.1,1000。）;
+    
+    
+    //将对象放入场景中：
+    
+    glMatrixMode（GL_MODELVIEW）;
+    glLoadIdentity（）;
+    
+    
+    //设置眼睛位置，观察位置和向上矢量：
+    
+    gluLookAt（0,0.3,0.0,0.0,0.0,1。，0。）;
+    
+    
+    //旋转场景：
+    
+    glRotatef（（GLfloat）Yrot，0,1。，0.）;
+    glRotatef（（GLfloat）Xrot，1。，0.，0。）;
+    
+    
+    //统一缩放场景：
+    
+    if（Scale <MINSCALE）
+        比例= MINSCALE;
+    glScalef（（GLfloat）量表，（GLfloat）量表，（GLfloat）量表）;
+    
+    
+    //设置雾参数：
+    
+    if（DepthCueOn！= 0）
+    {
+        glFogi（GL_FOG_MODE，FOGMODE）;
+        glFogfv（GL_FOG_COLOR，FOGCOLOR）;
+        glFogf（GL_FOG_DENSITY，FOGDENSITY）;
+        glFogf（GL_FOG_START，FOGSTART）;
+        glFogf（GL_FOG_END，FOGEND）;
+        glEnable（GL_FOG）;
+    }
+    其他
+    {
+        glDisable（GL_FOG）;
+    }
+    
+    
+    //可能绘制轴：
+    
+    if（AxesOn！= 0）
+    {
+        glColor3fv（＆Colors [WhichColor] [0]）;
+        glCallList（AxesList）;
+    }
+    
+    
+    //因为我们使用的是glScalef（），所以请确保normals得到单元化：
+    
+    glEnable（GL_NORMALIZE）;
+    
+    
+    //绘制当前对象：
+    
+    glCallList（BoxList）;
+    
+    
+    //绘制一些只在场景顶部旋转的无偿文本：
+    
+    glDisable（GL_DEPTH_TEST）;
+    glColor3f（0,1.1,1。）;
+    DoRasterString（0,1。，0，“移动的文本”）;
+    
+    
+    //绘制一些固定在屏幕上的无偿文本：
+    //
+    //重置投影矩阵以定义其场景
+    //世界坐标系在每个轴上从0到100
+    //
+    //这被称为“百分比单位”，只是一种便利
+    //
+    //我们不会将模型视图矩阵重置为标识
+    //想要转换这些坐标
+    
+    glDisable（GL_DEPTH_TEST）;
+    glMatrixMode（GL_PROJECTION）;
+    glLoadIdentity（）;
+    gluOrtho2D（0。，100.，0.，100。）;
+    glMatrixMode（GL_MODELVIEW）;
+    glLoadIdentity（）;
+    glColor3f（1.，1.，1。）;
+    DoRasterString（5.，5.，0，“Text That not”）;
+    
+    
+    //交换双缓冲的帧缓冲区：
+    
+    glutSwapBuffers（）;
+    
+    
+    //确保已发送图形缓冲区：
+    //注意：一定要在这里使用glFlush（），而不是glFinish（）！
+    
+    glFlush（）;
+}
+
+
+空虚
+DoAxesMenu（int id）
+{
+    AxesOn = id;
+    
+    glutSetWindow（MainWindow）;
+    glutPostRedisplay（）;
+}
+
+
+空虚
+DoColorMenu（int id）
+{
+    WhichColor = id - RED;
+    
+    glutSetWindow（MainWindow）;
+    glutPostRedisplay（）;
+}
+
+
+空虚
+DoDebugMenu（int id）
+{
+    DebugOn = id;
+    
+    glutSetWindow（MainWindow）;
+    glutPostRedisplay（）;
+}
+
+
+空虚
+DoDepthMenu（int id）
+{
+    DepthCueOn = id;
+    
+    glutSetWindow（MainWindow）;
+    glutPostRedisplay（）;
+}
+
+
+//主菜单回调：空虚
+DoMainMenu（int id）
+{
+    开关（id）
+    {
+        案例重置：
+            重启（ ）;
+            打破;
+            
+        案例退出：
+            //优雅地关闭图形：
+            //优雅地关闭图形窗口：
+            //优雅地退出程序：
+            glutSetWindow（MainWindow）;
+            glFinish（）;
+            glutDestroyWindow（MainWindow）;
+            退出（0）;
+            打破;
+            
+        默认：
+            fprintf（stderr，“不知道如何处理主菜单ID％d \ n”，id）;
+    }
+    
+    glutSetWindow（MainWindow）;
+    glutPostRedisplay（）;
+}
+
+
+空虚
+DoProjectMenu（int id）
+{
+    WhichProjection = id;
+    
+    glutSetWindow（MainWindow）;
+    glutPostRedisplay（）;
+}
+
+
+//使用过剩使用光栅字体显示字符串：
+
+空虚
+DoRasterString（float x，float y，float z，char * s）
+{
+    glRasterPos3f（（GLfloat）x，（GLfloat）y，（GLfloat）z）;
+    
+    char c; //要打印的一个字符
+    for（;（c = * s）！='\ 0'; s ++）
+    {
+        glutBitmapCharacter（GLUT_BITMAP_TIMES_ROMAN_24，c）;
+    }
+}
+
+
+//使用glut来使用笔划字体显示一串字符：
+
+空虚
+DoStrokeString（float x，float y，float z，float ht，char * s）
+{
+    glPushMatrix（）;
+    glTranslatef（（GLfloat）x，（GLfloat）y，（GLfloat）z）;
+    float sf = ht /(119.05f + 33.33f）;
+    glScalef（（GLfloat）sf，（GLfloat）sf，（GLfloat）sf）;
+    char c; //要打印的一个字符
+    for（;（c = * s）！='\ 0'; s ++）
+    {
+        glutStrokeCharacter（GLUT_STROKE_ROMAN，c）;
+    }
+    glPopMatrix（）;
+}
+
+
+//返回自程序启动以来的秒数：
+
+浮动
+ElapsedSeconds（）
+{
+    //获取自程序启动以来的毫秒数：
+    
+    int ms = glutGet（GLUT_ELAPSED_TIME）;
+    
+    //将其转换为秒：
+    
+    return（float）ms / 1000.f;
+}
+
+
+//初始化glui窗口：
+void
+InitMenus（）
+{
+    glutSetWindow（MainWindow）;
+    
+    int numColors = sizeof（Colors）/（3 * sizeof（int））;
+    int colormenu = glutCreateMenu（DoColorMenu）;
+    for（int i = 0; i <numColors; i ++）
+    {
+        glutAddMenuEntry（ColorNames [i]，i）;
+    }
+    
+    int axesmenu = glutCreateMenu（DoAxesMenu）;
+    glutAddMenuEntry（“关闭”，0）;
+    glutAddMenuEntry（“On”，1）;
+    
+    int depthcuemenu = glutCreateMenu（DoDepthMenu）;
+    glutAddMenuEntry（“关闭”，0）;
+    glutAddMenuEntry（“On”，1）;
+    
+    int debugmenu = glutCreateMenu（DoDebugMenu）;
+    glutAddMenuEntry（“关闭”，0）;
+    glutAddMenuEntry（“On”，1）;
+    
+    int projmenu = glutCreateMenu（DoProjectMenu）;
+    glutAddMenuEntry（“Orthographic”，ORTHO）;
+    glutAddMenuEntry（“Perspective”，PERSP）;
+    
+    int mainmenu = glutCreateMenu（DoMainMenu）;
+    glutAddSubMenu（“Axes”，axesmenu）;
+    glutAddSubMenu（“Colors”，colormenu）;
+    glutAddSubMenu（“Depth Cue”，depthcuemenu）;
+    glutAddSubMenu（“Projection”，projmenu）;
+    glutAddMenuEntry（“重置”，RESET）;
+    glutAddSubMenu（“Debug”，debugmenu）;
+    glutAddMenuEntry（“退出”，退出）;
+    
+    //将弹出菜单附加到鼠标右键：
+    
+    glutAttachMenu（GLUT_RIGHT_BUTTON）;
+}
+
+
+
+//初始化过剩和OpenGL库：
+//还设置显示列表和回调函数
+
+空虚
+InitGraphics（）
+{
+    //请求显示模式：
+    //要求红绿蓝-α颜色，双缓冲和z缓冲：
+    
+    glutInitDisplayMode（GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH）;
+    
+    //设置初始窗口配置：
+    
+    glutInitWindowPosition（0,0）;
+    glutInitWindowSize（INIT_WINDOW_SIZE，INIT_WINDOW_SIZE）;
+    
+    //打开窗口并设置其标题：
+    
+    MainWindow = glutCreateWindow（WINDOWTITLE）;
+    glutSetWindowTitle（WINDOWTITLE）;
+    
+    //设置framebuffer清除值：
+    
+    glClearColor（BACKCOLOR [0]，BACKCOLOR [1]，BACKCOLOR [2]，BACKCOLOR [3]）;
+    
+    //设置回调函数：
+    // DisplayFunc - 重绘窗口
+    // ReshapeFunc - 处理用户调整窗口大小
+    // KeyboardFunc - 处理键盘输入
+    // MouseFunc - 处理向下或向上的鼠标按钮
+    // MotionFunc - 按下按钮处理鼠标移动
+    // PassiveMotionFunc - 用按钮向上处理鼠标移动
+    // VisibilityFunc - 处理窗口可见性的变化
+    // EntryFunc - 处理进入或离开窗口的光标
+    // SpecialFunc - 处理键盘上的特殊键
+    // SpaceballMotionFunc - 处理太空球转换
+    // SpaceballRotateFunc - 处理太空球旋转
+    // SpaceballButtonFunc - 处理太空球按钮命中
+    // ButtonBoxFunc - 处理按钮框命中
+    // DialsFunc - 处理拨号旋转
+    // TabletMotionFunc - 处理数字化平板电脑动作
+    // TabletButtonFunc - 处理数字化平板电脑按钮命中
+    // MenuStateFunc - 在弹出菜单正在使用时声明
+    // TimerFunc - 触发从现在开始的某个时间发生的事情
+    // IdleFunc - 当没有别的事情发生时该怎么做
+
+glutSetWindow（MainWindow）;
+    glutDisplayFunc（显示）;
+    glutReshapeFunc（调整大小）;
+    glutKeyboardFunc（键盘）;
+    glutMouseFunc（MouseButton）;
+    glutMotionFunc（MouseMotion）;
+    glutPassiveMotionFunc（NULL）;
+    glutVisibilityFunc（可见性）;
+    glutEntryFunc（NULL）;
+    glutSpecialFunc（NULL）;
+    glutSpaceballMotionFunc（NULL）;
+    glutSpaceballRotateFunc（NULL）;
+    glutSpaceballButtonFunc（NULL）;
+    glutButtonBoxFunc（NULL）;
+    glutDialsFunc（NULL）;
+    glutTabletMotionFunc（NULL）;
+    glutTabletButtonFunc（NULL）;
+    glutMenuStateFunc（NULL）;
+    glutTimerFunc（-1，NULL，0）;
+    glutIdleFunc（NULL）;
+    
+    // init glew（必须打开一个窗口才能执行此操作）：
+    
+#ifdef WIN32
+    GLenum err = glewInit（）;
+    if（错误！= GLEW_OK）
+    {
+        fprintf（stderr，“glewInit Error \ n”）;
+    }
+    其他
+        fprintf（stderr，“GLEW初始化OK \ n”）;
+    fprintf（stderr，“状态：使用GLEW％s \ n”，glewGetString（GLEW_VERSION））;
+＃万一
+    
+}
+
+
+//初始化不会改变的显示列表：
+//（显示列表是一种存储opengl命令的方法
+//记忆，以便以后可以有效地播放
+//调用glCallList（）
+
+空虚
+InitLists（）
+{
+    float dx = BOXSIZE / 2.f;
+    float dy = BOXSIZE / 2.f;
+    float dz = BOXSIZE / 2.f;
+    glutSetWindow（MainWindow）;
+    
+    //创建对象：
+    
+    BoxList = glGenLists（1）;
+    glNewList（BoxList，GL_COMPILE）;
+    
+    glBegin（GL_QUADS）;
+    
+    glColor3f（0。，0.，1。）;
+    glNormal3f（0。，0.，1。）;
+    glVertex3f（-dx，-dy，dz）;
+    glVertex3f（dx，-dy，dz）;
+    glVertex3f（dx，dy，dz）;
+    glVertex3f（-dx，dy，dz）;
+    
+    glNormal3f（0。，0.， - 1。）;
+    glTexCoord2f（0,0。）;
+    glVertex3f（-dx，-dy，-dz）;
+    glTexCoord2f（0。，1。）;
+    glVertex3f（-dx，dy，-dz）;
+    glTexCoord2f（1.，1。）;
+    glVertex3f（dx，dy，-dz）;
+    glTexCoord2f（1.，O。）;
+    glVertex3f（dx，-dy，-dz）;
+    
+    glColor3f（1.，0.，O。）;
+    glNormal3f（1.，0.，0。）;
+    glVertex3f（dx，-dy，dz）;
+    glVertex3f（dx，-dy，-dz）;
+    glVertex3f（dx，dy，-dz）;
+    glVertex3f（dx，dy，dz）;
+    
+    glNormal3f（-1。，0.，0。）;
+    glVertex3f（-dx，-dy，dz）;
+    glVertex3f（-dx，dy，dz）;
+    glVertex3f（-dx，dy，-dz）;
+    glVertex3f（-dx，-dy，-dz）;
+    
+    glColor3f（0,1.1,0。）;
+    glNormal3f（0。，1.，0。）;
+    glVertex3f（-dx，dy，dz）;
+    glVertex3f（dx，dy，dz）;
+    glVertex3f（dx，dy，-dz）;
+    glVertex3f（-dx，dy，-dz）;
+    
+    glNormal3f（0。，-1。，0。）;
+    glVertex3f（-dx，-dy，dz）;
+    glVertex3f（-dx，-dy，-dz）;
+    glVertex3f（dx，-dy，-dz）;
+    glVertex3f（dx，-dy，dz）;
+    
+    glEnd（）;
+    
+    glEndList（）;
+    
+    
+    //创建轴：
+    
+    AxesList = glGenLists（1）;
+    glNewList（AxesList，GL_COMPILE）;
+    glLineWidth（AXES_WIDTH）;
+    轴（1.5）;
+    glLineWidth（1。）;
+    glEndList（）;
+}
+
+
+//键盘回调：
+
+空虚
+键盘（unsigned char c，int x，int y）
+{
+    if（DebugOn！= 0）
+        fprintf（stderr，“键盘：'％c'（0x％0x）\ n”，c，c）;
+    
+    开关（c）
+    {
+        案例'o'：
+        案例'O'：
+            WhichProjection = ORTHO;
+            打破;
+            
+        案例'p'：
+        案例'P'：
+            WhichProjection = PERSP;
+            打破;
+            
+        案例'q'：
+        案例'Q'：
+        案例ESCAPE：
+            DoMainMenu（退出）; //不会回到这里
+            打破; //快乐的编译器
+            
+        默认：
+            fprintf（stderr，“不知道如何处理键盘命中：'％c'（0x％0x）\ n”，c，c）;
+    }
+    
+    //强制调用Display（）：
+    
+    glutSetWindow（MainWindow）;
+    glutPostRedisplay（）;
+}
+
+
+//当鼠标按钮向下或向上转换时调用：
+
+空虚
+MouseButton（int button，int state，int x，int y）
+{
+    int b = 0; // LEFT，MIDDLE或RIGHT
+    
+    if（DebugOn！= 0）
+        fprintf（stderr，“MouseButton：％d，％d，％d，％d \ n”，按钮，状态，x，y）;
+    
+    
+    //获取正确的按钮位掩码：
+    
+    开关（按钮）
+    {
+        case GLUT_LEFT_BUTTON：
+            b =左;打破;
+            
+        case GLUT_MIDDLE_BUTTON：
+            b = MIDDLE;打破;
+            
+        case GLUT_RIGHT_BUTTON：
+            b =正确;打破;
+            
+        默认：
+            b = 0;
+            fprintf（stderr，“未知鼠标按钮：％d \ n”，按钮）;
+    }
+    
+    
+    //按钮向下设置位，向上清除位：
+    
+    if（state == GLUT_DOWN）
+    {
+        Xmouse = x;
+        Ymouse = y;
+        ActiveButton | = b; //设置正确的位
+    }
+    其他
+    {
+        ActiveButton＆= ~b; //清除正确的位
+    }
+}
+
+void
+MouseMotion（int x，int y）
+{
+    if（DebugOn！= 0）
+        fprintf（stderr，“MouseMotion：％d，％d \ n”，x，y）;
+    
+    
+    int dx = x - Xmouse; //改变鼠标坐标
+    int dy = y - Ymouse;
+    
+    if（（ActiveButton＆LEFT）！= 0）
+    {
+        Xrot + =（ANGFACT * dy）;
+        Yrot + =（ANGFACT * dx）;
+    }
+    
+    
+    if（（ActiveButton＆MIDDLE）！= 0）
+    {
+        Scale + = SCLFACT *（float）（dx - dy）;
+        
+        //防止对象从里到外或消失：
+        
+        if（Scale <MINSCALE）
+            比例= MINSCALE;
+    }
+    
+    Xmouse = x; //新的当前位置
+    Ymouse = y;
+    
+    glutSetWindow（MainWindow）;
+    glutPostRedisplay（）;
+}
+
+
+//重置转换和颜色：
+//这只设置全局变量 - 
+// glut主循环负责重绘场景
+
+空虚
+重启（ ）
+{
+    ActiveButton = 0;
+    AxesOn = 1;
+    DebugOn = 0;
+    DepthCueOn = 0;
+    比例= 1.0;
+    WhichColor = WHITE;
+    WhichProjection = PERSP;
+    Xrot = Yrot = 0。
+}
+
+
+//当用户调整窗口大小时调用：
+
+空虚
+调整大小（int width，int height）
+{
+    if（DebugOn！= 0）
+        fprintf（stderr，“ReSize：％d，％d \ n”，宽度，高度）;
+    
+    //因为窗口大小是，所以不需要做任何事情
+    //每次在Display（）中检查：
+    
+    glutSetWindow（MainWindow）;
+    glutPostRedisplay（）;
+}
+
+
+//处理窗口可见性的更改：
+
+空虚
+可见性（int state）
+{
+    if（DebugOn！= 0）
+        fprintf（stderr，“可见性：％d \ n”，状态）;
+    
+    if（state == GLUT_VISIBLE）
+    {
+        glutSetWindow（MainWindow）;
+        glutPostRedisplay（）;
+    }
+    其他
+    {
+        //可以通过跟踪事实进行优化
+        //窗口不可见并避免
+        //动画或重绘它...
+    }
+}
+
+
+
+///////////////////////////////////// / HANDY UTILITIES：//////// //////////////////
+
+
+//笔画字符'X''Y''Z'：
+
+static float xx [] = {
+    0.f，1.f，0.f，1.f
+};
+
+static float xy [] = {
+    -.5f，.5f，.5f，-.5f
+};
+
+static int xorder [] = {
+    1,2,3,4
+};
+
+static float yx [] = {
+    0.f，0.f，-.5f，.5f
+};
+
+static float yy [] = {
+    0.f，.6f，1.f，1.f
+};
+
+static int yorder [] = {
+    1,2,3，-2,4
+};
+
+static float zx [] = {
+    1.f，0.f，1.f，0.f，.25f，.75f
+};
+
+static float zy [] = {
+    .5f，.5f，-.5f，-.5f，0.f，0.f
+};
+
+static int zorder [] = {
+    1,2,3,4，-5,6
+};
+
+//用作字符高度的长度的一部分：
+const float LENFRAC = 0.10f;
+
+//用作字符起始位置的长度的一部分：
+const float BASEFRAC = 1.10f;
+
+//绘制一组3D轴：
+//（长度是世界坐标中的轴长度）
+void
+轴（浮动长度）
+{
+    glBegin（GL_LINE_STRIP）;
+    glVertex3f（长度，0,0。）;
+    glVertex3f（0,0.0,0。）;
+    glVertex3f（0。，length，0。）;
+    glEnd（）;
+    glBegin（GL_LINE_STRIP）;
+    glVertex3f（0,0.0,0。）;
+    glVertex3f（0.，0.，length）;
+    glEnd（）;
+    
+    浮动事实= LENFRAC *长度;
+    float base = BASEFRAC * length;
+    
+    glBegin（GL_LINE_STRIP）;
+    for（int i = 0; i <4; i ++）
+    {
+        int j = xorder [i];
+        if（j <0）
+        {
+            
+            glEnd（）;
+            glBegin（GL_LINE_STRIP）;
+            j = -j;
+        }
+        j--;
+        glVertex3f（base + fact * xx [j]，fact * xy [j]，0.0）;
+    }
+    glEnd（）;
+    
+    glBegin（GL_LINE_STRIP）;
+    for（int i = 0; i <5; i ++）
+    {
+        int j = yorder [i];
+        if（j <0）
+        {
+            
+            glEnd（）;
+            glBegin（GL_LINE_STRIP）;
+            j = -j;
+        }
+        j--;
+        glVertex3f（事实* yx [j]，base + fact * yy [j]，0.0）;
+    }
+    glEnd（）;
+    
+    glBegin（GL_LINE_STRIP）;
+    for（int i = 0; i <6; i ++）
+    {
+        int j = zorder [i];
+        if（j <0）
+        {
+            
+            glEnd（）;
+            glBegin（GL_LINE_STRIP）;
+            j = -j;
+        }
+        j--;
+        glVertex3f（0.0，fact * zy [j]，base + fact * zx [j]）;
+    }
+    glEnd（）;
+    
+}
+
+
+//将HSV转换为RGB的功能
+// 0. <= s，v，r，g，b <= 1。
+// 0. <= h <= 360。
+//当这返回时，调用：
+// glColor3fv（rgb）;
+
+空虚
+HsvRgb（float hsv [3]，float rgb [3]）
+{
+    //保证有效输入：
+    
+    float h = hsv [0] / 60.f;
+    而（h> = 6.）h - = 6。
+    而（h <0。）h + = 6。
+    
+    float s = hsv [1];
+    if（s <0。）
+        s = 0。;
+    如果（s> 1。）
+        s = 1。;
+    
+    float v = hsv [2];
+    if（v <0。）
+        v = 0。;
+    如果（v> 1。）
+        v = 1。;
+    
+    //如果sat == 0，则为灰色：
+    
+    if（s == 0.0）
+    {
+        rgb [0] = rgb [1] = rgb [2] = v;
+        返回;
+    }
+    
+    //从色调本身获取一个rgb：
+    
+    float i = floor（h）;
+    float f = h - i;
+    float p = v *（1.f - s）;
+    float q = v *（1.f - s * f）;
+    float t = v *（1.f - （s *（1.f-f）））;
+    
+    float r，g，b; //红色，绿色，蓝色
+    开关（（int）i）
+    {
+        案例0：
+            r = v; g = t; b = p;
+            打破;
+            
+        情况1：
+            r = q; g = v; b = p;
+            打破;
+            
+        案例2：
+            r = p; g = v; b = t;
+            打破;
+            
+        案例3：
+            r = p; g = q; b = v;
+            打破;
+            
+        案例4：
+            r = t; g = p; b = v;
+            打破;
+            
+        案例5：
+            r = v; g = p; b = q;
+            打破;
+    }
+    
+    
+    rgb [0] = r;
+    rgb [1] = g;
+    rgb [2] = b;
+}
+
+
+
+
+glColor3f( 0., 0., 1. );
+    glNormal3f( 0., 0.,  1. );
+    glVertex3f( -dx, -dy,  dz );
+    glVertex3f(  dx, -dy,  dz );
+    glVertex3f(  dx,  dy,  dz );
+    glVertex3f( -dx,  dy,  dz );
+    
+    glNormal3f( 0., 0., -1. );
+    glTexCoord2f( 0., 0. );
+    glVertex3f( -dx, -dy, -dz );
+    glTexCoord2f( 0., 1. );
+    glVertex3f( -dx,  dy, -dz );
+    glTexCoord2f( 1., 1. );
+    glVertex3f(  dx,  dy, -dz );
+    glTexCoord2f( 1., 0. );
+    glVertex3f(  dx, -dy, -dz );
+    
+    glColor3f( 1., 0., 0. );
+    glNormal3f(  1., 0., 0. );
+    glVertex3f(  dx, -dy,  dz );
+    glVertex3f(  dx, -dy, -dz );
+    glVertex3f(  dx,  dy, -dz );
+    glVertex3f(  dx,  dy,  dz );
+    
+    glNormal3f( -1., 0., 0. );
+    glVertex3f( -dx, -dy,  dz );
+    glVertex3f( -dx,  dy,  dz );
+    glVertex3f( -dx,  dy, -dz );
+    glVertex3f( -dx, -dy, -dz );
+    
+    glColor3f( 0., 1., 0. );
+    glNormal3f( 0.,  1., 0. );
+    glVertex3f( -dx,  dy,  dz );
+    glVertex3f(  dx,  dy,  dz );
+    glVertex3f(  dx,  dy, -dz );
+    glVertex3f( -dx,  dy, -dz );
+    
+    glNormal3f( 0., -1., 0. );
+    glVertex3f( -dx, -dy,  dz );
+    glVertex3f( -dx, -dy, -dz );
+    glVertex3f(  dx, -dy, -dz );
+    glVertex3f(  dx, -dy,  dz );
