@@ -10,11 +10,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "PJ4/main.cpp"
-            timestampString = "562203635.4203171"
+            timestampString = "562227854.190653"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "1815"
-            endingLineNumber = "1815"
+            startingLineNumber = "1841"
+            endingLineNumber = "1841"
             landmarkName = "InitLists( )"
             landmarkType = "9">
          </BreakpointContent>
@@ -26,13 +26,13 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "PJ4/main.cpp"
-            timestampString = "562203635.421204"
+            timestampString = "562227854.19165"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "1747"
-            endingLineNumber = "1747"
-            landmarkName = "InitGraphics( )"
-            landmarkType = "9">
+            startingLineNumber = "1771"
+            endingLineNumber = "1771"
+            landmarkName = "unknown"
+            landmarkType = "0">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -42,11 +42,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "PJ4/main.cpp"
-            timestampString = "562203635.4217891"
+            timestampString = "562227854.1925009"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "1360"
-            endingLineNumber = "1360"
+            startingLineNumber = "1371"
+            endingLineNumber = "1371"
             landmarkName = "Display( )"
             landmarkType = "9">
          </BreakpointContent>
@@ -58,11 +58,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "PJ4/main.cpp"
-            timestampString = "562203635.422241"
+            timestampString = "562227854.1931781"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "1428"
-            endingLineNumber = "1428"
+            startingLineNumber = "1447"
+            endingLineNumber = "1447"
             landmarkName = "Display( )"
             landmarkType = "9">
          </BreakpointContent>
